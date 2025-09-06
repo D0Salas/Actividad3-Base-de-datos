@@ -295,11 +295,9 @@ INSERT INTO ventas
 ('2024-07-20',4,4,NULL,535000.00,'CONTADO',12,NULL,0,'2024-08-03','ABC-1024'),
 ('2024-07-28',5,5,NULL,570000.00,'CONTADO',14,NULL,0,'2024-08-12','ABC-1025');
 
--- (Opcional) Algunos extras de ejemplo para ventas 1..5
 INSERT INTO venta_extras (venta_id, caracteristica_id, precio) VALUES
 (1,6,19999.00),(2,7,9999.00),(3,8,4999.00),(4,9,4999.00),(5,10,14999.00);
 
--- Copiar 25 ventas a ventas_acumuladas
 INSERT INTO ventas_acumuladas
 (venta_id, fecha, concesionaria_id, modelo_id, vendedor_id, servicio_id, precio_venta, modo_pago)
 SELECT venta_id, fecha, concesionaria_id, modelo_id, vendedor_id, servicio_id, precio_venta, modo_pago
@@ -329,8 +327,7 @@ WHERE anio < 2020;
 -- DROP TABLE ventas_acumuladas;
 -- TRUNCATE TABLE ventas_acumuladas;
 */
-------------------------------------------------------------------------------------
--- Vista --
+
 SELECT * FROM caracteristicas;
 SELECT * FROM concesionarias;
 SELECT * FROM inventario;
