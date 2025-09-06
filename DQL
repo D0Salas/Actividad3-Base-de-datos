@@ -1,0 +1,34 @@
+-- Queries --
+/* SELECT *
+FROM ventas
+WHERE concesionaria_id = 3
+ORDER BY fecha DESC
+LIMIT 100;
+
+SELECT *
+FROM ventas
+WHERE concesionaria_id = 3
+  AND precio_venta > 150000
+ORDER BY precio_venta DESC;
+
+UPDATE concesionarias
+SET nombre = REPLACE(nombre, nombre, CONCAT(nombre, ' - Nacional'));
+
+DELETE FROM modelos
+WHERE anio < 2020;
+
+-- DROP TABLE ventas_acumuladas;
+-- TRUNCATE TABLE ventas_acumuladas;
+*/
+
+SELECT * FROM caracteristicas;
+SELECT * FROM concesionarias;
+SELECT * FROM inventario;
+SELECT * FROM marcas;
+SELECT * FROM modelo_caracteristica;
+SELECT * FROM modelos;
+SELECT * FROM servicios_oficiales;
+SELECT * FROM vendedores;
+SELECT * FROM venta_extras;
+SELECT * FROM ventas;
+SELECT * FROM ventas_acumuladas;
