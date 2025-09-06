@@ -387,7 +387,6 @@ SELECT
   domicilio,
   telefono
 FROM concesionarias;
-
 -- Verifica el resultado:
 SELECT * FROM concesionarias_nacional ORDER BY concesionaria_id;
 
@@ -402,3 +401,4 @@ SELECT * FROM servicios_oficiales;
 SELECT * FROM aditamentos;
 SELECT * FROM venta_aditamentos;
 SELECT * FROM ventas;
+SELECT * FROM ventas_acumuladas;
