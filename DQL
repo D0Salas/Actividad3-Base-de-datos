@@ -1,56 +1,40 @@
--- Queries --
-/*
-SET @old_sql_safe_updates := @@SQL_SAFE_UPDATES;
-SET SQL_SAFE_UPDATES = 0;
+-- DQL -- 
+SELECT  v.venta_id, c.sede AS concesionaria, v.fecha, v.metodo_pago, v.precio_venta, v.vin
+FROM    ventas v
+JOIN    concesionarias c ON c.concesionaria_id = v.concesionaria_id
+WHERE   v.concesionaria_id = 3  <- cámbialo a la sede que te pidan
+ORDER BY v.fecha DESC
+LIMIT 10;                          
 
-START TRANSACTION;
+SELECT  v.venta_id, c.sede AS concesionaria, v.fecha, v.metodo_pago, v.precio_venta, v.vin
+FROM    ventas v
+JOIN    concesionarias c ON c.concesionaria_id = v.concesionaria_id
+WHERE   v.concesionaria_id = 3
+  AND   v.precio_venta > 150000
+ORDER BY v.precio_venta DESC, v.fecha DESC
+LIMIT 10;
 
-DROP TEMPORARY TABLE IF EXISTS tmp_modelos_del;
-CREATE TEMPORARY TABLE tmp_modelos_del AS
-SELECT m.modelo_id
-FROM modelos m
-WHERE m.anio < 2020;
+DROP TABLE IF EXISTS concesionarias_nacional;
+CREATE TABLE concesionarias_nacional AS
+SELECT
+  concesionaria_id,
+  -- agregamos sufijo y pasamos por REPLACE para evitar dobles guiones si ya existía el sufijo
+  REPLACE(CONCAT(sede, '-Nacional'), '--', '-') AS sede,
+  domicilio,
+  telefono
+FROM concesionarias;
+-- Verifica el resultado:
+SELECT * FROM concesionarias_nacional ORDER BY concesionaria_id;
 
-DELETE i
-FROM inventario i
-JOIN tmp_modelos_del t ON t.modelo_id = i.modelo_id;
+-- NO EJECUTAR: Borrado de la tabla auxiliar del punto 3
+-- DROP TABLE concesionarias_nacional;
 
-DELETE mc
-FROM modelo_caracteristica mc
-JOIN tmp_modelos_del t ON t.modelo_id = mc.modelo_id;
-
-DELETE t
-FROM tmp_modelos_del t
-JOIN ventas v ON v.modelo_id = t.modelo_id;
-
-DELETE t
-FROM tmp_modelos_del t
-JOIN ventas_acumuladas va ON va.modelo_id = t.modelo_id;
-
-DELETE m
-FROM modelos m
-JOIN tmp_modelos_del t ON t.modelo_id = m.modelo_id
-WHERE m.modelo_id >= 1;
-
-COMMIT;
-
-SET SQL_SAFE_UPDATES = @old_sql_safe_updates;
-
-SELECT 'inventario', COUNT(*) FROM inventario i JOIN modelos m ON m.modelo_id=i.modelo_id WHERE m.anio<2020
-UNION ALL SELECT 'modelo_caracteristica', COUNT(*) FROM modelo_caracteristica mc JOIN modelos m ON m.modelo_id=mc.modelo_id WHERE m.anio<2020
-UNION ALL SELECT 'ventas', COUNT(*) FROM ventas v JOIN modelos m ON m.modelo_id=v.modelo_id WHERE m.anio<2020
-UNION ALL SELECT 'ventas_acumuladas', COUNT(*) FROM ventas_acumuladas va JOIN modelos m ON m.modelo_id=va.modelo_id WHERE m.anio<2020;
-*/
-
+SELECT * FROM inventario;
 SELECT * FROM caracteristicas;
 SELECT * FROM concesionarias;
-SELECT * FROM inventario;
-SELECT * FROM marcas;
-SELECT * FROM modelo_caracteristica;
-SELECT * FROM modelos;
+SELECT * FROM empleados;
 SELECT * FROM servicios_oficiales;
-SELECT * FROM vendedores;
-SELECT * FROM venta_extras;
+SELECT * FROM aditamentos;
+SELECT * FROM venta_aditamentos;
 SELECT * FROM ventas;
 SELECT * FROM ventas_acumuladas;
-
