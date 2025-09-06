@@ -1,24 +1,45 @@
 -- Queries --
-/* SELECT *
-FROM ventas
-WHERE concesionaria_id = 3
-ORDER BY fecha DESC
-LIMIT 100;
+/*
+SET @old_sql_safe_updates := @@SQL_SAFE_UPDATES;
+SET SQL_SAFE_UPDATES = 0;
 
-SELECT *
-FROM ventas
-WHERE concesionaria_id = 3
-  AND precio_venta > 150000
-ORDER BY precio_venta DESC;
+START TRANSACTION;
 
-UPDATE concesionarias
-SET nombre = REPLACE(nombre, nombre, CONCAT(nombre, ' - Nacional'));
+DROP TEMPORARY TABLE IF EXISTS tmp_modelos_del;
+CREATE TEMPORARY TABLE tmp_modelos_del AS
+SELECT m.modelo_id
+FROM modelos m
+WHERE m.anio < 2020;
 
-DELETE FROM modelos
-WHERE anio < 2020;
+DELETE i
+FROM inventario i
+JOIN tmp_modelos_del t ON t.modelo_id = i.modelo_id;
 
--- DROP TABLE ventas_acumuladas;
--- TRUNCATE TABLE ventas_acumuladas;
+DELETE mc
+FROM modelo_caracteristica mc
+JOIN tmp_modelos_del t ON t.modelo_id = mc.modelo_id;
+
+DELETE t
+FROM tmp_modelos_del t
+JOIN ventas v ON v.modelo_id = t.modelo_id;
+
+DELETE t
+FROM tmp_modelos_del t
+JOIN ventas_acumuladas va ON va.modelo_id = t.modelo_id;
+
+DELETE m
+FROM modelos m
+JOIN tmp_modelos_del t ON t.modelo_id = m.modelo_id
+WHERE m.modelo_id >= 1;
+
+COMMIT;
+
+SET SQL_SAFE_UPDATES = @old_sql_safe_updates;
+
+SELECT 'inventario', COUNT(*) FROM inventario i JOIN modelos m ON m.modelo_id=i.modelo_id WHERE m.anio<2020
+UNION ALL SELECT 'modelo_caracteristica', COUNT(*) FROM modelo_caracteristica mc JOIN modelos m ON m.modelo_id=mc.modelo_id WHERE m.anio<2020
+UNION ALL SELECT 'ventas', COUNT(*) FROM ventas v JOIN modelos m ON m.modelo_id=v.modelo_id WHERE m.anio<2020
+UNION ALL SELECT 'ventas_acumuladas', COUNT(*) FROM ventas_acumuladas va JOIN modelos m ON m.modelo_id=va.modelo_id WHERE m.anio<2020;
 */
 
 SELECT * FROM caracteristicas;
@@ -32,3 +53,4 @@ SELECT * FROM vendedores;
 SELECT * FROM venta_extras;
 SELECT * FROM ventas;
 SELECT * FROM ventas_acumuladas;
+
