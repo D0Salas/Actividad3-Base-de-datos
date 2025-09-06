@@ -1,120 +1,133 @@
--- Tablas --
-CREATE TABLE IF NOT EXISTS marcas (
-  marca_id INT PRIMARY KEY AUTO_INCREMENT,
-  nombre VARCHAR(100) NOT NULL UNIQUE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+-- DDL --
+CREATE TABLE concesionarias (
+  concesionaria_id INT AUTO_INCREMENT PRIMARY KEY,
+  sede        VARCHAR(100) NOT NULL,   
+  domicilio   VARCHAR(200) NOT NULL,
+  telefono    VARCHAR(30)  NOT NULL
+);
 
-CREATE TABLE IF NOT EXISTS concesionarias (
-  concesionaria_id INT PRIMARY KEY AUTO_INCREMENT,
-  nombre VARCHAR(150) NOT NULL,
-  domicilio VARCHAR(255) NOT NULL,
-  telefono VARCHAR(50) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-CREATE TABLE IF NOT EXISTS servicios_oficiales (
-  servicio_id INT PRIMARY KEY AUTO_INCREMENT,
-  concesionaria_id INT NOT NULL,
-  nombre VARCHAR(150) NOT NULL,
-  domicilio VARCHAR(255) NOT NULL,
-  telefono VARCHAR(50) NOT NULL,
-  CONSTRAINT fk_servicio_concesionaria
+CREATE TABLE servicios_oficiales (
+  servicio_id       INT AUTO_INCREMENT PRIMARY KEY,
+  concesionaria_id  INT NOT NULL,
+  nombre            VARCHAR(120) NOT NULL,
+  domicilio         VARCHAR(200) NOT NULL,
+  telefono          VARCHAR(30)  NOT NULL,
+  CONSTRAINT fk_so_concesionaria
     FOREIGN KEY (concesionaria_id) REFERENCES concesionarias(concesionaria_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+);
 
-CREATE TABLE IF NOT EXISTS vendedores (
-  vendedor_id INT PRIMARY KEY AUTO_INCREMENT,
-  concesionaria_id INT NOT NULL,
-  nombre VARCHAR(120) NOT NULL,
-  domicilio VARCHAR(255) NOT NULL,
-  telefono VARCHAR(50) NOT NULL,
-  whatsapp VARCHAR(50) NOT NULL,
-  email VARCHAR(150) NOT NULL,
-  CONSTRAINT fk_vendedor_concesionaria
+CREATE TABLE caracteristicas (
+  caracteristica_id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre       VARCHAR(80)  NOT NULL UNIQUE,
+  descripcion  VARCHAR(200)
+);
+
+CREATE TABLE empleados (
+  empleado_id       INT AUTO_INCREMENT PRIMARY KEY,
+  concesionaria_id  INT NOT NULL,  
+  nombre            VARCHAR(120) NOT NULL,
+  domicilio         VARCHAR(200) NOT NULL,
+  telefono          VARCHAR(30) NOT NULL,
+  whatsapp          VARCHAR(30) NOT NULL,
+  email             VARCHAR(120) NOT NULL,
+  ventas_total      INT NOT NULL DEFAULT 0, 
+  CONSTRAINT fk_emp_concesionaria
     FOREIGN KEY (concesionaria_id) REFERENCES concesionarias(concesionaria_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+);
 
-CREATE TABLE IF NOT EXISTS modelos (
-  modelo_id INT PRIMARY KEY AUTO_INCREMENT,
-  marca_id INT NOT NULL,
-  nombre_modelo VARCHAR(120) NOT NULL,
-  anio INT NOT NULL,
-  tipo_motor ENUM('Gasolina','Diésel','Híbrido','Eléctrico') NOT NULL,
-  potencia_hp INT NOT NULL,
-  cilindros INT NOT NULL,
-  precio_base DECIMAL(12,2) NOT NULL,
-  CONSTRAINT fk_modelo_marca FOREIGN KEY (marca_id) REFERENCES marcas(marca_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE aditamentos (
+  aditamento_id INT AUTO_INCREMENT PRIMARY KEY,
+  nombre        VARCHAR(120) NOT NULL UNIQUE,
+  descripcion   VARCHAR(200) NOT NULL
+);
 
-CREATE TABLE IF NOT EXISTS caracteristicas (
-  caracteristica_id INT PRIMARY KEY AUTO_INCREMENT,
-  nombre VARCHAR(150) NOT NULL UNIQUE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE inventario (
+  inventario_id     INT AUTO_INCREMENT PRIMARY KEY,
+  automovil         VARCHAR(120) NOT NULL,     -- nombre/comercial
+  marca             VARCHAR(80)  NOT NULL,
+  modelo            VARCHAR(120) NOT NULL,
+  anio              SMALLINT     NOT NULL,
+  vin               VARCHAR(30)  UNIQUE,       -- número de serie
+  caracteristica_id INT          NOT NULL,     -- FK a Caracteristicas
+  concesionaria_id  INT          NULL,         -- si está en sede/almacén
+  servicio_id       INT          NULL,         -- si está en servicio oficial
+  precio            DECIMAL(12,2) NOT NULL,
+  en_stock          BOOLEAN       NOT NULL DEFAULT TRUE,
+  -- Debe estar en UNA ubicación: concesionaria XOR servicio oficial
+  CONSTRAINT chk_inv_ubicacion
+    CHECK (
+      (servicio_id IS NULL AND concesionaria_id IS NOT NULL)
+      OR (servicio_id IS NOT NULL AND concesionaria_id IS NULL)
+    ),
+  CONSTRAINT fk_inv_caracteristica
+    FOREIGN KEY (caracteristica_id) REFERENCES caracteristicas(caracteristica_id),
+  CONSTRAINT fk_inv_concesionaria
+    FOREIGN KEY (concesionaria_id) REFERENCES concesionarias(concesionaria_id),
+  CONSTRAINT fk_inv_servicio
+    FOREIGN KEY (servicio_id) REFERENCES servicios_oficiales(servicio_id)
+);
 
-CREATE TABLE IF NOT EXISTS modelo_caracteristica (
-  modelo_id INT NOT NULL,
-  caracteristica_id INT NOT NULL,
-  inclusion ENUM('SERIE','EXTRA') NOT NULL,
-  precio_extra DECIMAL(12,2) NULL,
-  PRIMARY KEY (modelo_id, caracteristica_id),
-  CONSTRAINT fk_mc_modelo FOREIGN KEY (modelo_id) REFERENCES modelos(modelo_id),
-  CONSTRAINT fk_mc_feature FOREIGN KEY (caracteristica_id) REFERENCES caracteristicas(caracteristica_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE ventas (
+  venta_id         INT AUTO_INCREMENT PRIMARY KEY,
+  vin              VARCHAR(30) NULL,  
+  vendedor_id      INT NULL,          
+  servicio_id      INT NULL,          
+  concesionaria_id INT NOT NULL,      
+  precio_venta     DECIMAL(12,2) NOT NULL,
+  metodo_pago      ENUM('CONTADO','CREDITO') NOT NULL,
+  fecha            DATE NOT NULL DEFAULT (CURRENT_DATE),
+  fecha_entrega    DATE,
+  matricula        VARCHAR(20),
+  era_stock        BOOLEAN NOT NULL DEFAULT TRUE, -- TRUE=de stock, FALSE=fábrica
+  CONSTRAINT chk_venta_canal
+    CHECK ( (vendedor_id IS NULL) <> (servicio_id IS NULL) ),
+  CONSTRAINT fk_venta_vin
+    FOREIGN KEY (vin) REFERENCES inventario(vin),
+  CONSTRAINT fk_venta_vendedor
+    FOREIGN KEY (vendedor_id) REFERENCES empleados(empleado_id),
+  CONSTRAINT fk_venta_servicio
+    FOREIGN KEY (servicio_id) REFERENCES servicios_oficiales(servicio_id),
+  CONSTRAINT fk_venta_concesionaria
+    FOREIGN KEY (concesionaria_id) REFERENCES concesionarias(concesionaria_id)
+);
 
-CREATE TABLE IF NOT EXISTS inventario (
-  vin VARCHAR(20) PRIMARY KEY,
-  modelo_id INT NOT NULL,
-  concesionaria_id INT NULL,
-  servicio_id INT NULL,
-  ubicacion_tipo ENUM('CONCESIONARIA','SUCURSAL','ALMACEN','SERVICIO_OFICIAL') NOT NULL,
-  ubicacion_detalle VARCHAR(200) NOT NULL,
-  precio_publico DECIMAL(12,2) NOT NULL,
-  descuento DECIMAL(12,2) DEFAULT 0 NOT NULL,
-  en_stock BOOLEAN NOT NULL DEFAULT TRUE,
-  CONSTRAINT fk_inv_modelo FOREIGN KEY (modelo_id) REFERENCES modelos(modelo_id),
-  CONSTRAINT fk_inv_concesionaria FOREIGN KEY (concesionaria_id) REFERENCES concesionarias(concesionaria_id),
-  CONSTRAINT fk_inv_servicio FOREIGN KEY (servicio_id) REFERENCES servicios_oficiales(servicio_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+CREATE TABLE venta_aditamentos (
+  venta_id       INT NOT NULL,
+  aditamento_id  INT NOT NULL,
+  precio_extra   DECIMAL(12,2) NOT NULL,
+  PRIMARY KEY (venta_id, aditamento_id),
+  CONSTRAINT fk_va_venta
+    FOREIGN KEY (venta_id)      REFERENCES ventas(venta_id) ON DELETE CASCADE,
+  CONSTRAINT fk_va_aditamento
+    FOREIGN KEY (aditamento_id) REFERENCES aditamentos(aditamento_id)
+);
 
-CREATE TABLE IF NOT EXISTS ventas (
-  venta_id INT PRIMARY KEY AUTO_INCREMENT,
-  fecha DATE NOT NULL,
+CREATE TABLE ventas_acumuladas (
+  acumulada_id     INT AUTO_INCREMENT PRIMARY KEY,
   concesionaria_id INT NOT NULL,
-  modelo_id INT NOT NULL,
-  vin VARCHAR(20) NULL,
-  precio_venta DECIMAL(12,2) NOT NULL,
-  modo_pago ENUM('CONTADO','CREDITO') NOT NULL,
-  vendedor_id INT NULL,
-  servicio_id INT NULL,
-  era_stock BOOLEAN NOT NULL,
-  fecha_entrega DATE NOT NULL,
-  matricula VARCHAR(12) NOT NULL,
-  CONSTRAINT fk_venta_concesionaria FOREIGN KEY (concesionaria_id) REFERENCES concesionarias(concesionaria_id),
-  CONSTRAINT fk_venta_modelo FOREIGN KEY (modelo_id) REFERENCES modelos(modelo_id),
-  CONSTRAINT fk_venta_vendedor FOREIGN KEY (vendedor_id) REFERENCES vendedores(vendedor_id),
-  CONSTRAINT fk_venta_servicio FOREIGN KEY (servicio_id) REFERENCES servicios_oficiales(servicio_id),
-  CONSTRAINT chk_quien_vendio CHECK ((vendedor_id IS NULL) XOR (servicio_id IS NULL))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-CREATE TABLE IF NOT EXISTS venta_extras (
-  venta_id INT NOT NULL,
-  caracteristica_id INT NOT NULL,
-  precio DECIMAL(12,2) NOT NULL,
-  PRIMARY KEY (venta_id, caracteristica_id),
-  CONSTRAINT fk_ve_venta FOREIGN KEY (venta_id) REFERENCES ventas(venta_id),
-  CONSTRAINT fk_ve_car FOREIGN KEY (caracteristica_id) REFERENCES caracteristicas(caracteristica_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-CREATE TABLE IF NOT EXISTS ventas_acumuladas (
-  venta_id INT PRIMARY KEY,
-  fecha DATE NOT NULL,
-  concesionaria_id INT NOT NULL,
-  modelo_id INT NOT NULL,
-  vendedor_id INT NULL,
-  servicio_id INT NULL,
-  precio_venta DECIMAL(12,2) NOT NULL,
-  modo_pago ENUM('CONTADO','CREDITO') NOT NULL,
+  vendedor_id      INT NULL,
+  servicio_id      INT NULL,
+  fecha            DATE NOT NULL,
+  metodo_pago      ENUM('CONTADO','CREDITO') NOT NULL,
+  vin              VARCHAR(30) NULL,
+  automovil        VARCHAR(120) NOT NULL,
+  marca            VARCHAR(80)  NOT NULL,
+  modelo           VARCHAR(120) NOT NULL,
+  anio             SMALLINT     NOT NULL,
+  era_stock        BOOLEAN NOT NULL,
+  precio_auto      DECIMAL(12,2) NOT NULL,
+  extras           DECIMAL(12,2) NOT NULL DEFAULT 0,
+  total_venta      DECIMAL(12,2) NOT NULL,
+  fecha_entrega    DATE NULL,
+  matricula        VARCHAR(20) NULL,
+  CONSTRAINT chk_va_canal CHECK ((vendedor_id IS NULL) <> (servicio_id IS NULL)),
   CONSTRAINT fk_va_concesionaria FOREIGN KEY (concesionaria_id) REFERENCES concesionarias(concesionaria_id),
-  CONSTRAINT fk_va_modelo FOREIGN KEY (modelo_id) REFERENCES modelos(modelo_id),
-  CONSTRAINT fk_va_vendedor FOREIGN KEY (vendedor_id) REFERENCES vendedores(vendedor_id),
-  CONSTRAINT fk_va_servicio FOREIGN KEY (servicio_id) REFERENCES servicios_oficiales(servicio_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  CONSTRAINT fk_va_vendedor      FOREIGN KEY (vendedor_id)      REFERENCES empleados(empleado_id),
+  CONSTRAINT fk_va_servicio      FOREIGN KEY (servicio_id)      REFERENCES servicios_oficiales(servicio_id),
+  CONSTRAINT fk_va_vin           FOREIGN KEY (vin)              REFERENCES inventario(vin),
+  KEY idx_va_conc_fecha (concesionaria_id, fecha),
+  KEY idx_va_vendedor (vendedor_id),
+  KEY idx_va_servicio (servicio_id),
+  KEY idx_va_vin (vin)
+);
+
